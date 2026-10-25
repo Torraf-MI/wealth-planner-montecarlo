@@ -1,0 +1,35 @@
+# Famiglia Rossi: accumulo per la pensione con l'università dei figli a metà strada.
+# Tutti gli importi sono in euro di oggi: il modello li rivaluta con l'inflazione simulata.
+nome = "Famiglia Rossi, piano pensione"
+
+[cliente]
+eta = 45
+eta_pensione = 67
+eta_finale = 95
+
+[flussi]
+patrimonio_iniziale = 180000
+versamento_annuo = 14000
+crescita_versamenti = 0.01   # +1% reale all'anno con la carriera
+spesa_annua = 40000          # tenore di vita in pensione, pensione pubblica compresa
+pensione_pubblica = 21000
+
+[portafoglio]
+pesi = { azioni = 0.70, obbligazioni = 0.25, liquidita = 0.05 }
+pesi_pensione = { azioni = 0.45, obbligazioni = 0.45, liquidita = 0.10 }   # percorso life-cycle
+costi = 0.004
+
+[obiettivo]
+descrizione = "Capitale alla pensione"
+importo = 550000
+eta = 67
+
+[[uscite]]
+descrizione = "Università del primo figlio"
+eta = 53
+importo = 30000
+
+[[uscite]]
+descrizione = "Università del secondo figlio"
+eta = 56
+importo = 30000

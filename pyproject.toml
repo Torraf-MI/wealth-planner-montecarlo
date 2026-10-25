@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wealth-planner-montecarlo"
+version = "0.1.0"
+description = "Pianificazione patrimoniale Monte Carlo: probabilità di raggiungere un obiettivo, sostenibilità dei prelievi in pensione, inflazione, con report per il cliente"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Francesco Torraco" }]
+keywords = ["monte carlo", "financial planning", "pianificazione finanziaria", "pensione", "safe withdrawal rate", "wealth management"]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "pandas>=2.0",
+    "plotly>=5.20",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+png = ["kaleido>=1.0"]
+notebook = ["jupyterlab>=4", "kaleido>=1.0"]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+wealth-planner = "wealth_planner.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wealth_planner = ["templates/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B905"]

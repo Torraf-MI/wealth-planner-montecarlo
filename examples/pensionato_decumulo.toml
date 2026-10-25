@@ -1,0 +1,32 @@
+# Dirigente che lascia il lavoro a 62 anni e vive del patrimonio fino alla pensione pubblica a 67.
+# Prelievi con guardrail: la spesa si riduce negli anni difficili e si ripristina quando i mercati recuperano.
+nome = "Ing. Bianchi, uscita anticipata dal lavoro"
+
+[cliente]
+eta = 62
+eta_pensione = 62
+eta_finale = 97
+eta_modale_decesso = 91
+
+[flussi]
+patrimonio_iniziale = 1000000
+costo_fiscale_iniziale = 800000   # 200.000 € di plusvalenze latenti, tassate quando si preleva
+spesa_annua = 48000
+pensione_pubblica = 26000
+eta_pensione_pubblica = 67
+strategia = "guardrail"
+
+[portafoglio]
+pesi = { azioni = 0.50, obbligazioni = 0.40, liquidita = 0.10 }
+costi = 0.006   # ETF più consulenza indipendente
+
+[mercato]
+inflazione_media = 0.022
+
+[mercato.asset.obbligazioni]
+rendimento = 0.032   # rendimenti attesi più alti sulle obbligazioni acquistate oggi
+
+[[uscite]]
+descrizione = "Aiuto ai figli per l'acquisto della casa"
+eta = 64
+importo = 80000

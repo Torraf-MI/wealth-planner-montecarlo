@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pianificazione patrimoniale – {{ client }}</title>
+{% if plotly_inline %}<script>{{ plotly_inline | safe }}</script>{% else %}<script src="{{ plotly_cdn }}"></script>{% endif %}
+<style>
+  :root { --blu: #1f4e79; --grigio: #595959; --chiaro: #f2f5f9; }
+  body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; color: #222; max-width: 980px;
+         margin: 0 auto; padding: 32px 16px 60px; line-height: 1.5; background: #fff; }
+  header { border-bottom: 3px solid var(--blu); padding-bottom: 12px; margin-bottom: 24px; }
+  h1 { color: var(--blu); margin: 0 0 4px; font-size: 1.7rem; }
+  h2 { color: var(--blu); font-size: 1.2rem; margin-top: 36px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .sub { color: var(--grigio); font-size: .95rem; }
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0; }
+  .kpi div { background: var(--chiaro); border-radius: 8px; padding: 12px 14px; }
+  .kpi b { display: block; font-size: 1.45rem; color: var(--blu); }
+  .kpi span { font-size: .8rem; color: var(--grigio); text-transform: uppercase; letter-spacing: .03em; }
+  .esito { border-left: 5px solid; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+  .esito.ok { border-color: #0ca30c; background: #eef8ee; }
+  .esito.attenzione { border-color: #fab219; background: #fff8e8; }
+  .esito.ko { border-color: #d03b3b; background: #fcefef; }
+  .esito b::before { margin-right: 6px; }
+  .esito.ok b::before { content: "✓"; color: #0ca30c; }
+  .esito.attenzione b::before { content: "!"; color: #b07800; }
+  .esito.ko b::before { content: "✕"; color: #d03b3b; }
+  .due { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 10px 0; }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid #e5e5e5; }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: var(--blu); color: #fff; font-weight: 600; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  tr.forte td { font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .scroll table { white-space: nowrap; }
+  .grafico { margin: 14px 0; overflow: hidden; }
+  .note { font-size: .8rem; color: var(--grigio); background: var(--chiaro); padding: 12px 14px; border-radius: 6px; }
+  ul { padding-left: 20px; }
+  @media print { .grafico { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pianificazione patrimoniale</h1>
+  <div class="sub"><b>{{ nome }}</b> · preparata per <b>{{ client }}</b> · {{ today }}</div>
+</header>
+
+<h2>Sintesi</h2>
+<div class="esito {{ esito }}"><b>Esito</b> {{ sintesi }}</div>
+<div class="kpi">
+  {% for label, value in kpi %}<div><span>{{ label }}</span><b>{{ value }}</b></div>{% endfor %}
+</div>
+<p>Tutti gli importi sono espressi in <b>euro di oggi</b>, cioè al netto dell'inflazione: 100.000 € a 70 anni
+indicano ciò che oggi si comprerebbe con 100.000 €. Il piano si considera riuscito quando il patrimonio copre
+tutte le spese previste fino a {{ eta_finale }} anni.</p>
+
+<div class="due">
+<div>
+<h2>Ipotesi del piano</h2>
+<table>
+  {% for label, value in ipotesi %}<tr><td>{{ label }}</td><td>{{ value }}</td></tr>{% endfor %}
+</table>
+</div>
+<div>
+<h2>Allocazione del portafoglio</h2>
+<table>
+  <tr><th>Classe di attività</th><th>Oggi</th>{% if life_cycle %}<th>Alla pensione</th>{% endif %}<th>Rend. atteso</th><th>Volatilità</th></tr>
+  {% for r in allocazione %}
+  <tr><td>{{ r.nome }}</td><td>{{ r.oggi }}</td>{% if life_cycle %}<td>{{ r.pensione }}</td>{% endif %}<td>{{ r.rendimento }}</td><td>{{ r.volatilita }}</td></tr>
+  {% endfor %}
+</table>
+<p class="sub">{% if life_cycle %}La quota azionaria si riduce gradualmente ogni anno fino alla pensione
+(percorso <i>life-cycle</i>), poi resta costante. {% endif %}Rendimenti attesi nominali e lordi di costi e imposte;
+il portafoglio è ribilanciato ogni anno.</p>
+</div>
+</div>
+
+<h2>Il piano nel tempo</h2>
+<div class="grafico">{{ grafici.flussi | safe }}</div>
+<p>Il ventaglio mostra come può evolvere il patrimonio su {{ n_simulazioni }} scenari di mercato: la linea centrale è
+lo scenario mediano, la fascia scura contiene metà degli scenari, quella chiara nove su dieci.</p>
+<div class="grafico">{{ grafici.ventaglio | safe }}</div>
+<div class="scroll">
+<table>
+  <tr><th>Età</th><th>Pessimistico (P5)</th><th>Prudente (P25)</th><th>Mediano</th><th>Favorevole (P75)</th><th>Ottimistico (P95)</th><th>Piano in equilibrio</th></tr>
+  {% for r in percentili %}
+  <tr{% if r.forte %} class="forte"{% endif %}><td>{{ r.eta }}</td>{% for v in r.valori %}<td>{{ v }}</td>{% endfor %}<td>{{ r.prob }}</td></tr>
+  {% endfor %}
+</table>
+</div>
+
+{% if obiettivo %}
+<h2>{{ obiettivo.descrizione }}</h2>
+<p>L'obiettivo di <b>{{ ob_importo }}</b> a {{ obiettivo.eta }} anni è raggiunto
+nel <b>{{ ob_prob }}</b> degli scenari; il patrimonio mediano a quell'età è {{ ob_mediana }}.
+{% if accumulo %}Per raggiungerlo in 8 casi su 10 servirebbe un versamento annuo di <b>{{ versamento_necessario }}</b>
+(oggi {{ versamento_attuale }}).{% endif %}</p>
+<div class="grafico">{{ grafici.obiettivo | safe }}</div>
+{% endif %}
+
+<h2>Sostenibilità dei prelievi in pensione</h2>
+<p>Il patrimonio copre le spese fino a {{ eta_finale }} anni nel <b>{{ successo }}</b> degli scenari{% if eta_esaurimento %};
+quando non basta, si esaurisce in genere intorno agli {{ eta_esaurimento }} anni{% endif %}. A {{ eta_finale }} anni il
+patrimonio residuo è di {{ finale_p50 }} nello scenario mediano, tra {{ finale_p10 }} e {{ finale_p90 }} in 8 casi su 10.</p>
+<p>Non tutti gli scenari sfavorevoli si traducono in un problema reale: tenendo conto della probabilità di essere
+ancora in vita a ogni età, il rischio di <b>restare senza risorse mentre si è in vita</b> è del <b>{{ longevita }}</b>.</p>
+<div class="grafico">{{ grafici.probabilita | safe }}</div>
+
+<p>Il modo di prelevare conta quanto l'importo. Tre strategie a confronto sugli stessi scenari
+(spesa comprensiva della pensione pubblica, in euro di oggi):</p>
+<div class="scroll">
+<table>
+  <tr><th>Strategia di prelievo</th><th>Successo</th><th>Spesa annua media</th><th>Spesa nell'anno peggiore (P10)</th><th>Patrimonio finale mediano</th></tr>
+  {% for s in strategie %}
+  <tr><td>{{ s.nome }}</td><td>{{ s.successo }}</td><td>{{ s.media }}</td><td>{{ s.peggiore }}</td><td>{{ s.finale }}</td></tr>
+  {% endfor %}
+</table>
+</div>
+<p class="sub">Il prelievo in percentuale non esaurisce mai il patrimonio ma rende la spesa variabile con i mercati;
+i guardrail mantengono la spesa prevista finché il tasso di prelievo resta entro il 20% di quello iniziale, la
+tagliano del 10% quando lo supera e la ripristinano quando i mercati recuperano.</p>
+
+<h2>Inflazione</h2>
+<p>Con un'inflazione media del {{ inflazione_media }} annuo, alla pensione 1.000 € di oggi varranno circa
+<b>{{ potere_acquisto }}</b> in potere d'acquisto. L'estratto conto mostrerà importi molto più alti di quelli
+che contano davvero: il rendimento reale mediano del portafoglio, al netto di costi, bollo e inflazione, è del
+<b>{{ rendimento_reale }}</b> annuo. Le imposte sulle plusvalenze realizzate con i prelievi pesano per circa
+{{ imposte }} sull'intero piano.</p>
+<div class="grafico">{{ grafici.inflazione | safe }}</div>
+
+<h2>Rischio di sequenza</h2>
+<p>A parità di rendimento medio, l'ordine in cui arrivano gli anni buoni e cattivi è decisivo: un crollo dei
+mercati nei primi anni di pensione, quando si inizia a prelevare, lascia meno capitale per il recupero. Nel quinto
+di scenari con i primi dieci anni peggiori il piano riesce nel <b>{{ seq_peggiori }}</b> dei casi, nel quinto con
+i primi dieci anni migliori nel <b>{{ seq_migliori }}</b>.</p>
+<div class="grafico">{{ grafici.sequenza | safe }}</div>
+
+<h2>Leve a disposizione</h2>
+<p>Prelevando un importo fisso indicizzato all'inflazione, la spesa sostenibile in 9 casi su 10 è di
+<b>{{ prelievo_sostenibile }}</b> l'anno, pensione pubblica compresa (oggi prevista {{ spesa_attuale }}). La mappa mostra come cambia la probabilità di successo con il tenore di vita e
+l'allocazione: oltre una certa soglia, aumentare le azioni non compensa una spesa troppo alta.</p>
+<div class="grafico">{{ grafici.griglia | safe }}</div>
+<p>Effetto di singole modifiche, ciascuna applicata da sola al piano attuale:</p>
+<div class="scroll">
+<table>
+  <tr><th>Modifica</th><th>Successo</th>{% if obiettivo %}<th>Obiettivo</th>{% endif %}<th>Patrimonio finale mediano</th></tr>
+  {% for l in leve %}
+  <tr{% if l.forte %} class="forte"{% endif %}><td>{{ l.nome }}</td><td>{{ l.successo }}</td>{% if obiettivo %}<td>{{ l.obiettivo }}</td>{% endif %}<td>{{ l.finale }}</td></tr>
+  {% endfor %}
+</table>
+</div>
+
+<h2>Metodologia</h2>
+<ul>
+  <li>Simulazione Monte Carlo su {{ n_simulazioni }} scenari annui: rendimenti lognormali correlati delle classi di
+      attività{% if regimi %}, con un {{ prob_crisi }} di anni turbolenti a volatilità doppia per riprodurre le perdite
+      estreme più frequenti della curva normale{% endif %}.</li>
+  <li>Inflazione simulata come processo autoregressivo: gli anni di inflazione alta tendono a susseguirsi.
+      Versamenti, spese e pensione pubblica sono indicizzati all'inflazione simulata.</li>
+  <li>Ogni anno: versamento, prelievo, rendimento del portafoglio ribilanciato al netto dei costi, imposta di bollo.
+      Sui prelievi si paga l'imposta sulla quota di plusvalenza, con il metodo del costo medio.</li>
+  <li>Longevità secondo una legge di Gompertz; il rischio di longevità combina l'età di esaurimento di ogni scenario
+      con la probabilità di essere in vita a quell'età.</li>
+  <li>Spesa sostenibile e versamento necessario sono calcolati con la ricerca dello zero (metodo di Brent) sugli
+      stessi scenari, così i confronti non dipendono dal caso.</li>
+</ul>
+
+<p class="note">{% if data_note %}{{ data_note }} {% endif %}Documento a scopo illustrativo: non costituisce consulenza
+finanziaria, fiscale o previdenziale. Le probabilità dipendono dalle ipotesi di rendimento, volatilità e inflazione
+indicate, che sono stime e non previsioni; i rendimenti passati non garantiscono quelli futuri. La fiscalità è
+modellata in forma semplificata (aliquota unica sulle plusvalenze, bollo sul valore dei prodotti finanziari) e va
+verificata con il proprio consulente.</p>
+</body>
+</html>
